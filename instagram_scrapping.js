@@ -73,7 +73,7 @@ function generate() {
 
     function getInstagramProfileName() {
       const title = document.title; // Get the title of the document
-      const match = title.match(/^\w+ \(@(\w+)\)/); // Check if the title is in the expected format
+      const match = title.match(/@([a-zA-Z0-9_.]+)/); // Check if the title is in the expected format
       // If there is a match, return the profile name; otherwise, return null or an error message
       return match ? match[1] : null;
     }
