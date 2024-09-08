@@ -3,12 +3,12 @@ from PIL import Image
 from os import listdir
 from os.path import isfile, join
 
-p_from = '\\Users\\sergi\\Documents\\MyProjects\\Web\\Python\\python-wiki\\api\\old\\'
-p_to = '\\Users\\sergi\\Documents\\MyProjects\\Web\\Python\\python-wiki\\api\\static\\'
+input_folder = ''
+output_folder = ''
 
 
 def get_list():
-    return [f for f in listdir(p_from) if isfile(join(p_from, f))]
+    return [f for f in listdir(input_folder) if isfile(join(input_folder, f))]
 
 
 def delete_file(path):
@@ -60,10 +60,10 @@ def calculate_image(image):
 
 for item in get_list():
     try:
-        image = get_image(f'{p_from}{item}')
+        image = get_image(f'{input_folder}{item}')
         width, height = calculate_image(image)
         image = resize_image(image, width, height)
-        optimize_image(image, f'{p_to}{item}')
-        delete_file(f'{p_from}{item}')
+        optimize_image(image, f'{output_folder}{item}')
+        delete_file(f'{input_folder}{item}')
     except Exception as e:
         print(item, str(e))
