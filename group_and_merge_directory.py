@@ -2,8 +2,6 @@ import os
 import re
 from collections import defaultdict
 
-SOURCE_PATH = '\\Users\\sergi\\Desktop\\source\\'
-
 def merge_files(directory):
     # Create a dictionary to group file contents by base name
     files_dict = defaultdict(list)
@@ -67,4 +65,8 @@ def merge_files(directory):
                 os.remove(os.path.join(directory, file))
 
 if __name__ == '__main__':
-    merge_files(SOURCE_PATH)
+    
+    input_folder = ''
+
+    # Process the folder
+    merge_files(input_folder)
