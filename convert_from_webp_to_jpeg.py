@@ -4,12 +4,10 @@ from os import listdir
 from os.path import isfile, join
 from pathlib import Path
 
-p_from = '\\Users\\sergi\\Documents\\MyProjects\\Web\\Python\\python-wiki\\api\\old\\'
-p_to = '\\Users\\sergi\\Documents\\MyProjects\\Web\\Python\\python-wiki\\api\\old\\'
-
+target_folder = ''
 
 def get_list():
-    return [f for f in listdir(p_from) if isfile(join(p_from, f))]
+    return [f for f in listdir(target_folder) if isfile(join(target_folder, f))]
 
 
 def delete_file(path):
@@ -20,7 +18,7 @@ def delete_file(path):
 def get_image(path):
     image = Image.open(path).convert("RGB")
     filename = Path(path).stem
-    image.save(f'{p_from}{filename}.jpg', format="jpeg", lossless=True)
+    image.save(f'{target_folder}{filename}.jpg', format="jpeg", lossless=True)
     return image
 
 
@@ -29,7 +27,7 @@ for item in get_list():
     try:
         extension = Path(item).suffix
         if (extension == '.webp'):
-            image = get_image(f'{p_from}{item}')
-            delete_file(f'{p_from}{item}')
+            image = get_image(f'{target_folder}{item}')
+            delete_file(f'{target_folder}{item}')
     except Exception as e:
         print(item, str(e))
