@@ -64,9 +64,38 @@ def merge_files(directory):
             for file in numbered_files:
                 os.remove(os.path.join(directory, file))
 
+
+def move_files(source_dir, destination_dir):
+    # Check if the source directory exists
+    if not os.path.exists(source_dir):
+        print(f"Source directory '{source_dir}' does not exist.")
+        return
+
+    # Create the destination directory if it doesn't exist
+    if not os.path.exists(destination_dir):
+        os.makedirs(destination_dir)
+
+    # Scan the files in the source directory
+    for filename in os.listdir(source_dir):
+        source_path = os.path.join(source_dir, filename)
+        destination_path = os.path.join(destination_dir, filename)
+
+        # Check if it's a file (and not a directory)
+        if os.path.isfile(source_path):
+            # Move the file to the destination
+            os.rename(source_path, destination_path)
+            print(f"Moved: {filename}")
+        else:
+            print(f"Skipped directory: {filename}")
+            
+
 if __name__ == '__main__':
     
-    input_folder = ''
+    input_folder = '<source_path>'
+    output_folder = '<destination_path>'
 
     # Process the folder
     merge_files(input_folder)
+    
+    # Move files to the target folder
+    move_files(input_folder, output_folder)
