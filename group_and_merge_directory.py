@@ -91,11 +91,11 @@ def move_files(source_dir, destination_dir):
 
 if __name__ == '__main__':
     
-    input_folder = '<source_path>'
-    output_folder = '<destination_path>'
+    input_dir = '<source_path>'
+    output_dir = '<destination_path>'
 
     # Process the folder
-    merge_files(input_folder)
+    merge_files(input_dir)
     
-    # Move files to the target folder
-    move_files(input_folder, output_folder)
+    # Move files to the target dir
+    move_files(input_dir, output_dir)
