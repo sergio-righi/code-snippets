@@ -83,6 +83,6 @@ def delete_all_files(bucket_name):
         print(f"Failed to delete files: {e}")
 
 if __name__ == "__main__":
-    input_folder = ''
-    upload_files(input_folder, BUCKET_NAME)
+    target_dir = '<target_path>'
+    upload_files(target_dir, BUCKET_NAME)
     # delete_all_files(BUCKET_NAME)
