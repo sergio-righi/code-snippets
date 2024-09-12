@@ -17,7 +17,7 @@ def delete_file(path):
 
 
 def get_image(path):
-    image = Image.open(path).convert("RGB")
+    image = Image.open(path).convert('RGB')
     filename = Path(path).stem
     image.save(f'{target_dir}{filename}.jpg', format='jpeg', lossless=True)
     return image
