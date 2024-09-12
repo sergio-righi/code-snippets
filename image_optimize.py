@@ -3,12 +3,12 @@ from PIL import Image
 from os import listdir
 from os.path import isfile, join
 
-input_folder = ''
-output_folder = ''
+input_dir = '<source_path>'
+output_dir = '<destination_path>'
 
 
 def get_list():
-    return [f for f in listdir(input_folder) if isfile(join(input_folder, f))]
+    return [f for f in listdir(input_dir) if isfile(join(input_dir, f))]
 
 
 def delete_file(path):
@@ -18,8 +18,8 @@ def delete_file(path):
 
 def get_image(path):
     image = Image.open(path)
-    if image.mode in ("RGBA", "P"):
-        return image.convert("RGB")
+    if image.mode in ('RGBA', 'P'):
+        return image.convert('RGB')
     return image
 
 
@@ -39,7 +39,7 @@ def resize_image(image, width, height):
 
 
 def optimize_image(image, path):
-    image.save(path, format='JPEG', optimize=True, quality=95)
+    image.save(path, format='jpeg', optimize=True, quality=95)
 
 
 def calculate_ratio(width, height, max_width, max_height):
@@ -60,10 +60,10 @@ def calculate_image(image):
 
 for item in get_list():
     try:
-        image = get_image(f'{input_folder}{item}')
+        image = get_image(f'{input_dir}{item}')
         width, height = calculate_image(image)
         image = resize_image(image, width, height)
-        optimize_image(image, f'{output_folder}{item}')
-        delete_file(f'{input_folder}{item}')
+        optimize_image(image, f'{output_dir}{item}')
+        delete_file(f'{input_dir}{item}')
     except Exception as e:
         print(item, str(e))
