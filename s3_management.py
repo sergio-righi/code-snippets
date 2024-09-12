@@ -31,7 +31,7 @@ def file_exists(bucket_name, file_key):
     """Check if the file already exists in the bucket."""
     try:
         s3_client.head_object(Bucket=bucket_name, Key=file_key)
-        print(f"File {file_key} already exists, skipping upload.")
+        print(f'File {file_key} already exists, skipping upload.')
         return True
     except ClientError as e:
         if e.response['Error']['Code'] == '404':
@@ -49,22 +49,22 @@ def upload_files(directory, bucket_name):
             # Check if the filename is a valid MongoDB ObjectId
             if not is_valid_objectid(file):
                 # Generate a new ObjectId and rename the file
-                new_filename = f"{ObjectId()}{os.path.splitext(file)[1]}"  # Retain original extension
+                new_filename = f'{ObjectId()}{os.path.splitext(file)[1]}'  # Retain original extension
                 new_file_path = os.path.join(root, new_filename)
                 os.rename(file_path, new_file_path)
                 file_path = new_file_path  # Update the path to the new file
                 relative_path = os.path.relpath(new_file_path, directory)
-                print(f"Renamed {file} to {new_filename}")
+                print(f'Renamed {file} to {new_filename}')
 
             # Check if the file already exists in the bucket
             if not file_exists(bucket_name, relative_path):
                 try:
                     s3_client.upload_file(file_path, bucket_name, relative_path)
-                    print(f"Uploaded: {relative_path}")
+                    print(f'Uploaded: {relative_path}')
                 except NoCredentialsError:
-                    print("Credentials not available")
+                    print('Credentials not available')
                 except Exception as e:
-                    print(f"Failed to upload {file_path}: {e}")
+                    print(f'Failed to upload {file_path}: {e}')
 
 def delete_all_files(bucket_name):
     try:
@@ -72,17 +72,17 @@ def delete_all_files(bucket_name):
         objects = s3_client.list_objects_v2(Bucket=bucket_name)
         if 'Contents' in objects:
             for obj in objects['Contents']:
-                print(f"Deleting: {obj['Key']}")
+                print(f'Deleting: {obj["Key"]}')
                 s3_client.delete_object(Bucket=bucket_name, Key=obj['Key'])
-            print(f"All files deleted from bucket '{bucket_name}'")
+            print(f'All files deleted from bucket "{bucket_name}"')
         else:
-            print(f"No files found in bucket '{bucket_name}'")
+            print(f'No files found in bucket "{bucket_name}"')
     except NoCredentialsError:
-        print("Credentials not available")
+        print('Credentials not available')
     except Exception as e:
-        print(f"Failed to delete files: {e}")
+        print(f'Failed to delete files: {e}')
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     target_dir = '<target_path>'
     upload_files(target_dir, BUCKET_NAME)
     # delete_all_files(BUCKET_NAME)
