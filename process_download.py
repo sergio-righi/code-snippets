@@ -46,29 +46,29 @@ def process_txt_file(txt_file_path, output_directory):
         if url:  # Skip empty lines
             # Generate a unique Object ID (UUID) for the image file name
             object_id = str(ObjectId())
-            file_extension = "jpeg"
-            image_name = f"{object_id}.{file_extension}"
+            file_extension = 'jpeg'
+            image_name = f'{object_id}.{file_extension}'
             image_path = os.path.join(file_directory, image_name)
             
             # Download and save the image
             download_image(url, image_path)
 
 # Main function to process all .txt files in the folder
-def process_folder(input_folder, output_directory):
+def process_dir(input_directory, output_directory):
     # Ensure output directory exists
     os.makedirs(output_directory, exist_ok=True)
     
     # Scan through all .txt files in the folder
-    for file_name in os.listdir(input_folder):
-        if file_name.endswith(".txt"):
-            txt_file_path = os.path.join(input_folder, file_name)
+    for file_name in os.listdir(input_directory):
+        if file_name.endswith('.txt'):
+            txt_file_path = os.path.join(input_directory, file_name)
             process_txt_file(txt_file_path, output_directory)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     
-    # Set the input folder where .txt files are located and the output folder
-    input_folder = ""  # Path to folder with .txt files
-    output_folder = ""  # Path to output folder where images will be saved
+    # Set the input directory where .txt files are located and the output directory
+    input_dir = '<source_path>'  # Path to directory with .txt files
+    output_dir = '<destination_path>'  # Path to output directory where images will be saved
     
-    # Process the folder
-    process_folder(input_folder, output_folder)
+    # Process the directory
+    process_dir(input_dir, output_dir)
