@@ -46,14 +46,14 @@ def merge_files(directory):
             for file in numbered_files:
                 file_path = os.path.join(directory, file)
                 with open(file_path, 'r') as infile:
-                    temp_lines.append("\n")  # Add a newline before each numbered file's content
+                    temp_lines.append('\n')  # Add a newline before each numbered file's content
                     for line in infile:
                         if line.strip() and line not in seen_lines:
                             temp_lines.append(line)
                             seen_lines.add(line)
 
             # Remove any empty line at the end of the file
-            if temp_lines and temp_lines[-1] == "\n":
+            if temp_lines and temp_lines[-1] == '\n':
                 temp_lines.pop()
             
             # Write unique lines to the original file
@@ -68,7 +68,7 @@ def merge_files(directory):
 def move_files(source_dir, destination_dir):
     # Check if the source directory exists
     if not os.path.exists(source_dir):
-        print(f"Source directory '{source_dir}' does not exist.")
+        print(f'Source directory "{source_dir}" does not exist.')
         return
 
     # Create the destination directory if it doesn't exist
@@ -84,9 +84,9 @@ def move_files(source_dir, destination_dir):
         if os.path.isfile(source_path):
             # Move the file to the destination
             os.rename(source_path, destination_path)
-            print(f"Moved: {filename}")
+            print(f'Moved: {filename}')
         else:
-            print(f"Skipped directory: {filename}")
+            print(f'Skipped directory: {filename}')
             
 
 if __name__ == '__main__':
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     input_dir = '<source_path>'
     output_dir = '<destination_path>'
 
-    # Process the folder
+    # Process the directory
     merge_files(input_dir)
     
     # Move files to the target dir
