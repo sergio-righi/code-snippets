@@ -22,9 +22,9 @@ def download_image(url, save_path):
             with open(save_path, 'wb') as f:
                 f.write(response.content)
         else:
-            print(f"Skipped (not an image): {url}")
+            print(f'Skipped (not an image): {url}')
     except requests.exceptions.RequestException as e:
-        print(f"Failed to download {url}: {e}")
+        print(f'Failed to download {url}: {e}')
 
 
 # Function to process a .txt file, download images and store them in the proper folder
