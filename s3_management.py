@@ -66,6 +66,46 @@ def upload_files(directory, bucket_name):
                 except Exception as e:
                     print(f'Failed to upload {file_path}: {e}')
 
+
+def download_all_files(target_dir, bucket_name):
+    """Download all files from the bucket, preserving the directory structure."""
+
+    # List directories
+    response_root = s3_client.list_objects_v2(Bucket=bucket_name, Delimiter="/")
+    
+    if 'CommonPrefixes' not in response_root:
+        print("No directories found in the bucket.")
+        return
+
+    for directory in response_root['CommonPrefixes']:
+        
+        # List objects        
+        response_directory = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=directory['Prefix'])
+        
+        if 'Contents' not in response_directory:
+            print("No files found in the bucket.")
+            return
+        
+        for document in response_directory['Contents'][1:]:
+            file_key = document['Key']  # This includes the full path in the bucket
+
+            # Create the local directory structure
+            local_file_path = os.path.join(target_dir, file_key)
+            target_dir_path = os.path.dirname(local_file_path)
+
+            if not os.path.exists(target_dir_path):
+                os.makedirs(target_dir_path)
+
+            # Download the file
+            try:
+                print(f'Downloading {file_key} to {local_file_path}...')
+                s3_client.download_file(bucket_name, file_key, local_file_path)
+            except NoCredentialsError:
+                print('Credentials not available.')
+            except Exception as e:
+                print(f'Error downloading {file_key}: {e}')
+
+
 def delete_all_files(bucket_name):
     try:
         # List all objects in the bucket
@@ -82,7 +122,9 @@ def delete_all_files(bucket_name):
     except Exception as e:
         print(f'Failed to delete files: {e}')
 
+
 if __name__ == '__main__':
     target_dir = '<target_path>'
     upload_files(target_dir, BUCKET_NAME)
     # delete_all_files(BUCKET_NAME)
+    # download_all_files(target_dir, BUCKET_NAME)
