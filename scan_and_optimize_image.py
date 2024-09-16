@@ -30,7 +30,7 @@ def optimize_image(target_dir):
                     new_width = int(new_height * aspect_ratio)
                 
                 # Resize the image
-                img = img.resize((new_width, new_height), Image.ANTIALIAS)
+                img = img.resize((new_width, new_height), Image.LANCZOS)
             
             # Save the image with reduced quality
             img.save(target_dir, format='JPEG', quality=QUALITY, optimize=True)
