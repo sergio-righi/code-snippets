@@ -3,21 +3,8 @@ var result = [];
 const main = document.body?.querySelector("main");
 const grid = [...main?.querySelectorAll("img")];
 
-function generate() {
-  if (result.length === 0) return;
-
-  // Create a new iframe
-  const iframe = document.createElement("iframe");
-  iframe.style.top = "0px";
-  iframe.style.left = "0px";
-  iframe.style.width = "100%";
-  iframe.style.height = "40vh";
-  iframe.style.border = "none";
-  iframe.style.position = "fixed";
-  document.body.appendChild(iframe);
-
-  // Custom HTML content for the iframe
-  const htmlContent = `
+function getContent(contentType) {
+  return `
     <!DOCTYPE html>
     <html lang="en">
     <head>
@@ -35,11 +22,15 @@ function generate() {
       </style>
     </head>
     <body>
-      <div id="toolbar-container">
+      ${
+        contentType === "grid"
+          ? `<div id="toolbar-container">
         <button id="close-button">Close</button>
         <button id="copy-button">Copy</button>
         <button id="download-button">Download</button>
-      </div>
+      </div>`
+          : ""
+      }
       <div id="image-container">
         ${unique()
           .map((item, index) => `<img id="image-${index}" src="${item}" />`)
@@ -48,11 +39,32 @@ function generate() {
     </body>
     </html>
   `;
+}
+
+function openNewWindow(contentType) {
+  // Open a new tab or window and load the Blob URL
+  const newWindow = window.open();
+  newWindow.document.write(getContent(contentType));
+  newWindow.document.close();
+}
+
+function openWindow(contentType) {
+  if (result.length === 0) return;
+
+  // Create a new iframe
+  const iframe = document.createElement("iframe");
+  iframe.style.top = "0px";
+  iframe.style.left = "0px";
+  iframe.style.width = "100%";
+  iframe.style.height = "40vh";
+  iframe.style.border = "none";
+  iframe.style.position = "fixed";
+  document.body.appendChild(iframe);
 
   // Write the HTML into the iframe
   const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
   iframeDoc.open();
-  iframeDoc.write(htmlContent);
+  iframeDoc.write(getContent(contentType));
   iframeDoc.close();
 
   // Once the iframe is ready, add the interactivity
@@ -143,9 +155,67 @@ function unique() {
   return list;
 }
 
-function start() {
-  result = grid.map((item) => item.src);
-  generate();
+async function imageBitmapToSrc(imageBitmap) {
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  // Set canvas dimensions to match the video frame
+  canvas.width = imageBitmap.width;
+  canvas.height = imageBitmap.height;
+
+  // Draw the ImageBitmap onto the canvas
+  ctx.drawImage(imageBitmap, 0, 0);
+
+  // Convert the canvas to a Blob, then to a URL
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      resolve(url);
+    });
+  });
 }
 
-start();
+async function getVideoElement(src) {
+  const videos = document.getElementsByTagName("video");
+  const video = [...videos].find((item) => item.src === src);
+  await video.play();
+  return video;
+}
+
+async function fromVideo(src) {
+  result = [];
+  if (HTMLVideoElement.prototype.requestVideoFrameCallback) {
+    const video = await getVideoElement(src);
+    const duration = Math.floor(video?.duration);
+    const frames = [];
+
+    const drawingLoop = async (timestamp, frame) => {
+      const mediaTime = Math.floor(frame.mediaTime);
+
+      if (!frames.includes(mediaTime)) {
+        frames.push(mediaTime);
+        const imageBitmap = await createImageBitmap(video);
+        const img = await imageBitmapToSrc(imageBitmap); // Convert the ImageBitmap to src
+        result.push(img);
+      }
+
+      if (frames.length === duration) {
+        await video.pause();
+        openNewWindow("video");
+      } else {
+        video.requestVideoFrameCallback(drawingLoop);
+      }
+    };
+
+    video.requestVideoFrameCallback(drawingLoop);
+  } else {
+    console.error("your browser doesn't support this API yet");
+  }
+}
+
+function fromGrid() {
+  result = grid.map((item) => item.src);
+  openWindow("grid");
+}
+
+fromGrid();
