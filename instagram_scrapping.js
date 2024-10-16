@@ -186,11 +186,11 @@ async function fromVideo(src) {
   result = [];
   if (HTMLVideoElement.prototype.requestVideoFrameCallback) {
     const video = await getVideoElement(src);
-    const duration = Math.floor(video?.duration);
+    const duration = Math.floor(video?.duration) * 5;
     const frames = [];
 
     const drawingLoop = async (timestamp, frame) => {
-      const mediaTime = Math.floor(frame.mediaTime);
+      const mediaTime = frame.mediaTime;
 
       if (!frames.includes(mediaTime)) {
         frames.push(mediaTime);
