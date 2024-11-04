@@ -1,7 +1,8 @@
 var result = [];
-
-const main = document.body?.querySelector("main");
-const grid = [...main?.querySelectorAll("img")];
+var currentIndex = 0;
+var main = document.body?.querySelector("main");
+var postsContainer = main?.firstElementChild?.lastElementChild;
+var posts = [...postsContainer?.querySelectorAll("img")];
 
 function getContent(contentType) {
   return `
@@ -182,7 +183,7 @@ async function getVideoElement(src) {
   return video;
 }
 
-async function fromVideo(src) {
+async function processVideo(src) {
   result = [];
   if (HTMLVideoElement.prototype.requestVideoFrameCallback) {
     const video = await getVideoElement(src);
@@ -213,9 +214,63 @@ async function fromVideo(src) {
   }
 }
 
-function fromGrid() {
+function processSimple() {
   result = grid.map((item) => item.src);
   openWindow("grid");
 }
 
-fromGrid();
+function run() {
+  posts[currentIndex++].click();
+
+  setTimeout(() => {
+    const article = document.getElementsByTagName("article")[0];
+    const dialog = document.querySelector("div[role=dialog]");
+    const parentContainer =
+      dialog.parentElement?.parentElement?.parentElement?.parentElement;
+    const closeButton = parentContainer?.childNodes[1].firstElementChild;
+    const postContainer = article.firstElementChild?.firstElementChild;
+    const video = postContainer?.querySelector("video");
+    const ul = postContainer.querySelector("ul");
+
+    function processImage(isLast) {
+      let img = null;
+      if (ul) {
+        const length = ul.childNodes.length;
+        const li = ul.childNodes[isLast ? length - 1 : length - 2];
+        img = li.querySelector("img");
+      } else {
+        img = postContainer.querySelector("img");
+      }
+      if (img) {
+        result.push(img.src);
+      }
+    }
+
+    function moveToNext() {
+      let button = postContainer?.querySelector("button[aria-label=Next]");
+      if (button) {
+        processImage(false);
+        button.click();
+        setTimeout(moveToNext, 150);
+      } else {
+        if (video) {
+          console.log(video.src);
+        } else {
+          processImage(true);
+        }
+        closeButton.click();
+        setTimeout(function () {
+          if (posts.length > currentIndex) {
+            run();
+          } else {
+            openWindow("grid");
+          }
+        }, 200);
+      }
+    }
+
+    moveToNext();
+  }, 300);
+}
+
+run();
