@@ -1,44 +1,27 @@
 class SwissTournament {
   constructor(participants, slots) {
-    this.participants = participants;
+    this.participants = participants.map((participant, i) => ({
+      ...participant,
+      seed: i + 1,
+      wins: 0,
+      losses: 0,
+      diff: 0,
+      buchholz: 0,
+      opponents: [],
+    }));
     this.slots = slots;
     this.rounds = [];
     this.results = [];
-    const { breakpoint, slices } = this.getConfiguration(
-      this.participants.length
-    );
-    Object.assign(this, { breakpoint, slices });
+    this.breakpoint = Math.ceil(Math.log2(participants.length)) - 1;
   }
 
-  getConfiguration(participants) {
-    const breakpoint = Math.ceil(Math.log2(participants)) - 1; // Compute breakpoint
-    const fullBracketSize = 2 ** breakpoint; // Closest power of 2 greater than participants
-    const difference = fullBracketSize - participants; // Excess spots in the bracket
-
-    const slices = [];
-    let remainingParticipants = participants;
-
-    // Generate the growing part of slices
-    for (let i = 0; i < breakpoint; i++) {
-      const sliceSize = Math.min(remainingParticipants, 2 ** i);
-      slices.push(sliceSize);
-      remainingParticipants -= sliceSize;
-      if (remainingParticipants <= 0) break;
-    }
-
-    // Mirror the growing part to create the symmetric slices array
-    const mirrored = slices.slice(0, -1).reverse();
-
-    return { breakpoint, slices: slices.concat(mirrored) };
-  }
-
-  // Sort participants based on the rules (wins, losses, score, diff)
+  // Sort participants based on the rules (wins, losses, buchholz, seed)
   sortParticipants() {
     this.participants.sort((a, b) => {
       if (a.wins !== b.wins) return b.wins - a.wins;
       if (a.losses !== b.losses) return a.losses - b.losses;
-      if (a.score !== b.score) return b.score - a.score;
-      return b.diff - a.diff;
+      if (a.buchholz !== b.buchholz) return b.buchholz - a.buchholz;
+      return a.seed - b.seed;
     });
   }
 
@@ -49,18 +32,22 @@ class SwissTournament {
     );
   }
 
-  sliceArray(array, parts) {
-    const chunkSize = Math.ceil(array.length / parts); // Calculate the size of each chunk
-    const slices = [];
+  sliceArray(data) {
+    const grouped = {};
 
-    for (let i = 0; i < array.length; i += chunkSize) {
-      slices.push(array.slice(i, i + chunkSize)); // Slice the array into parts
-    }
+    data.forEach((item) => {
+      const key = `${item.wins}-${item.losses}`;
+      if (!grouped[key]) {
+        grouped[key] = [];
+      }
+      grouped[key].push(item);
+    });
 
-    return slices;
+    return Object.values(grouped);
   }
 
   printRound() {
+    if (this.rounds.length === 0) return;
     console.log(
       this.rounds[this.rounds.length - 1].map(
         (item) => `${item.player1.name} vs ${item.player2.name}`
@@ -68,27 +55,62 @@ class SwissTournament {
     );
   }
 
-  // Generate a new round
   generateRound() {
-    this.sortParticipants();
     const participants = this.filterParticipants();
-    if (participants.length < 2) return; // If no participants left for pairing, stop.
+    if (participants.length < 2) return; // If no participants are left for pairing, stop.
 
     console.log(`-------- Round ${this.rounds.length + 1} --------`);
     const round = [];
-    const slices = this.sliceArray(
-      participants,
-      this.slices[this.rounds.length]
-    );
-    for (let i = 0; i < slices.length; i++) {
-      const middle = slices[i].length / 2;
-      for (let j = 0; j < middle; j++) {
-        round.push({
-          player1: slices[i][j],
-          player2: slices[i][middle + j],
-        });
+    const slices = this.sliceArray(participants);
+
+    for (let slice of slices) {
+      const length = slice.length;
+
+      if (this.rounds.length === 0) {
+        // First round: Pair first half with corresponding participant from second half
+        const middle = Math.floor(length / 2);
+        for (let i = 0; i < middle; i++) {
+          const player1 = slice[i];
+          const player2 = slice[middle + i];
+
+          round.push({ player1, player2 });
+        }
+      } else {
+        // Subsequent rounds: Pair first with last, second with second-last, etc.
+        const unpaired = [...slice]; // Copy the slice to track unpaired participants.
+
+        while (unpaired.length > 1) {
+          const player1 = unpaired[0];
+          let player2Index = unpaired.length - 1;
+
+          // Ensure player1 hasn't already faced player2
+          while (
+            player2Index > 0 &&
+            player1.opponents.includes(unpaired[player2Index].name)
+          ) {
+            player2Index--; // Check the next available player
+          }
+
+          if (player2Index > 0) {
+            const player2 = unpaired[player2Index];
+
+            // Add valid pair to the round
+            round.push({
+              player1,
+              player2,
+            });
+
+            // Remove paired players from the unpaired list
+            unpaired.splice(player2Index, 1);
+            unpaired.shift(); // Remove player1
+          } else {
+            // If no valid opponent is found for player1, skip pairing
+            unpaired.shift();
+          }
+        }
       }
     }
+
     this.rounds.push(round);
   }
 
@@ -106,7 +128,23 @@ class SwissTournament {
     this.simulateRound(true);
   }
 
-  // Process round results and update participants' stats
+  calculateBuchholz() {
+    this.participants.forEach((participant) => {
+      participant.buchholz = participant.opponents.reduce(
+        (acc, opponentName) => {
+          const opponent = this.participants.find(
+            (p) => p.name === opponentName
+          );
+          if (opponent) {
+            acc += opponent.wins - opponent.losses;
+          }
+          return acc;
+        },
+        0
+      );
+    });
+  }
+
   processResults(roundResults) {
     roundResults.forEach((result) => {
       const { won, lost, diff } = result;
@@ -115,14 +153,16 @@ class SwissTournament {
 
       // Update winner's stats
       winner.wins = (winner.wins || 0) + 1;
-      winner.score = (winner.score || 0) + (loser.weight - winner.weight);
       winner.diff = (winner.diff || 0) + diff;
+      winner.opponents = (winner.opponents || []).concat(loser.name);
 
       // Update loser's stats
       loser.losses = (loser.losses || 0) + 1;
-      loser.score = (loser.score || 0) + (winner.weight - loser.weight);
       loser.diff = (loser.diff || 0) - diff;
+      loser.opponents = (loser.opponents || []).concat(winner.name);
     });
+
+    this.calculateBuchholz();
   }
 
   // Check if the tournament should end
@@ -138,12 +178,10 @@ class SwissTournament {
     console.log(`-------- Standings --------`);
     this.sortParticipants();
     return this.participants.map((p, index) => ({
-      rank: index + 1,
       name: p.name,
       wins: p.wins,
       losses: p.losses,
-      // score: p.score,
-      // diff: p.diff,
+      buchholz: p.buchholz,
     }));
   }
 
@@ -162,38 +200,15 @@ class SwissTournament {
   }
 
   // Simulate tournament rounds until the end condition is met
-  simulateTournament() {
+  simulateTournament(results) {
     while (!this.checkEndCondition()) {
       this.generateRound();
       this.printRound();
-      this.simulateRound(false);
+      if (!results) this.simulateRound(false);
+      else this.processResults(results[this.rounds.length - 1]);
       console.log(this.generateStandings());
     }
 
     this.generateDecisionRound();
-
-    console.log(this.generateStandings());
   }
 }
-
-// Example usage:
-const participants = [
-  { name: "Ana", weight: 0, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Bob", weight: 1, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Chloe", weight: 2, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Diana", weight: 3, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Eve", weight: 4, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Fran", weight: 5, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Gary", weight: 6, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Helen", weight: 7, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Isabel", weight: 8, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "John", weight: 9, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Kate", weight: 10, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Lucas", weight: 11, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Mavie", weight: 12, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Noa", weight: 13, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Owen", weight: 14, wins: 0, losses: 0, score: 0, diff: 0 },
-  { name: "Phil", weight: 15, wins: 0, losses: 0, score: 0, diff: 0 },
-];
-
-new SwissTournament(participants, 8).simulateTournament();
