@@ -1,45 +1,53 @@
 class SwissTournament {
   constructor(participants, slots) {
-    this.participants = participants.map((participant, i) => ({
-      ...participant,
-      seed: i + 1,
-      wins: 0,
-      losses: 0,
-      diff: 0,
-      buchholz: 0,
-      opponents: [],
-    }));
+    this.participants = Object.fromEntries(
+      participants.map((participant, i) => [
+        participant,
+        {
+          seed: i + 1,
+          wins: 0,
+          losses: 0,
+          diff: 0,
+          buchholz: 0,
+          opponents: [],
+        },
+      ])
+    );
     this.slots = slots;
     this.rounds = [];
     this.results = [];
-    this.breakpoint = Math.ceil(Math.log2(participants.length)) - 1;
+    this.breakpoint =
+      Math.ceil(Math.log2(Object.keys(participants).length)) - 1;
   }
 
-  // Sort participants based on the rules (wins, losses, buchholz, seed)
+  // Sort participants based on rules (wins, losses, buchholz, seed)
   sortParticipants() {
-    this.participants.sort((a, b) => {
-      if (a.wins !== b.wins) return b.wins - a.wins;
-      if (a.losses !== b.losses) return a.losses - b.losses;
-      if (a.buchholz !== b.buchholz) return b.buchholz - a.buchholz;
-      return a.seed - b.seed;
-    });
+    const sorted = Object.entries(this.participants)
+      .sort(([, a], [, b]) => {
+        if (a.wins !== b.wins) return b.wins - a.wins;
+        if (a.losses !== b.losses) return a.losses - b.losses;
+        if (a.buchholz !== b.buchholz) return b.buchholz - a.buchholz;
+        return a.seed - b.seed;
+      })
+      .map(([name, data]) => ({ name, ...data }));
+
+    return sorted;
   }
 
-  // Remove participants who have 3 wins or 3 losses
+  // Filter participants who have not yet reached the breakpoint
   filterParticipants() {
-    return this.participants.filter(
-      (p) => p.wins < this.breakpoint && p.losses < this.breakpoint
-    );
+    return Object.entries(this.participants)
+      .filter(([, p]) => p.wins < this.breakpoint && p.losses < this.breakpoint)
+      .map(([name, data]) => ({ name, ...data }));
   }
 
+  // Group participants by wins-losses
   sliceArray(data) {
     const grouped = {};
 
     data.forEach((item) => {
       const key = `${item.wins}-${item.losses}`;
-      if (!grouped[key]) {
-        grouped[key] = [];
-      }
+      if (!grouped[key]) grouped[key] = [];
       grouped[key].push(item);
     });
 
@@ -50,14 +58,28 @@ class SwissTournament {
     if (this.rounds.length === 0) return;
     console.log(
       this.rounds[this.rounds.length - 1].map(
-        (item) => `${item.player1.name} vs ${item.player2.name}`
+        (item) => `${item.player1} vs ${item.player2}`
       )
     );
   }
 
+  generateDecisionRound() {
+    const participants = Object.keys(this.participants);
+    if (participants.length % 2 === 0 && this.slots % 2 === 0) return;
+    console.log("-------- Decision Round --------");
+    this.rounds.push([
+      {
+        player1: participants[this.slots - 1],
+        player2: participants[this.slots],
+      },
+    ]);
+    this.printRound();
+    this.simulateRound(true);
+  }
+
   generateRound() {
     const participants = this.filterParticipants();
-    if (participants.length < 2) return; // If no participants are left for pairing, stop.
+    if (participants.length < 2) return;
 
     console.log(`-------- Round ${this.rounds.length + 1} --------`);
     const round = [];
@@ -67,44 +89,34 @@ class SwissTournament {
       const length = slice.length;
 
       if (this.rounds.length === 0) {
-        // First round: Pair first half with corresponding participant from second half
         const middle = Math.floor(length / 2);
         for (let i = 0; i < middle; i++) {
-          const player1 = slice[i];
-          const player2 = slice[middle + i];
-
-          round.push({ player1, player2 });
+          round.push({
+            player1: slice[i].name,
+            player2: slice[middle + i].name,
+          });
         }
       } else {
-        // Subsequent rounds: Pair first with last, second with second-last, etc.
-        const unpaired = [...slice]; // Copy the slice to track unpaired participants.
-
+        const unpaired = [...slice];
         while (unpaired.length > 1) {
           const player1 = unpaired[0];
           let player2Index = unpaired.length - 1;
 
-          // Ensure player1 hasn't already faced player2
           while (
             player2Index > 0 &&
-            player1.opponents.includes(unpaired[player2Index].name)
+            this.participants[player1.name].opponents.includes(
+              unpaired[player2Index].name
+            )
           ) {
-            player2Index--; // Check the next available player
+            player2Index--;
           }
 
           if (player2Index > 0) {
             const player2 = unpaired[player2Index];
-
-            // Add valid pair to the round
-            round.push({
-              player1,
-              player2,
-            });
-
-            // Remove paired players from the unpaired list
+            round.push({ player1: player1.name, player2: player2.name });
             unpaired.splice(player2Index, 1);
-            unpaired.shift(); // Remove player1
+            unpaired.shift();
           } else {
-            // If no valid opponent is found for player1, skip pairing
             unpaired.shift();
           }
         }
@@ -114,70 +126,45 @@ class SwissTournament {
     this.rounds.push(round);
   }
 
-  generateDecisionRound() {
-    if (this.participants.length % 2 === 0 && this.slots % 2 === 0) return;
-    this.sortParticipants();
-    console.log(`-------- Decision Round --------`);
-    this.rounds.push([
-      {
-        player1: this.participants[this.slots - 1],
-        player2: this.participants[this.slots],
-      },
-    ]);
-    this.printRound();
-    this.simulateRound(true);
-  }
-
   calculateBuchholz() {
-    this.participants.forEach((participant) => {
-      participant.buchholz = participant.opponents.reduce(
-        (acc, opponentName) => {
-          const opponent = this.participants.find(
-            (p) => p.name === opponentName
-          );
-          if (opponent) {
-            acc += opponent.wins - opponent.losses;
-          }
-          return acc;
-        },
-        0
-      );
-    });
+    for (const [name, participant] of Object.entries(this.participants)) {
+      participant.buchholz = participant.opponents.reduce((acc, oppName) => {
+        const opponent = this.participants[oppName];
+        if (opponent) {
+          acc += opponent.wins - opponent.losses;
+        }
+        return acc;
+      }, 0);
+    }
   }
 
   processResults(roundResults) {
-    roundResults.forEach((result) => {
-      const { won, lost, diff } = result;
-      const winner = this.participants.find((p) => p.name === won);
-      const loser = this.participants.find((p) => p.name === lost);
+    roundResults.forEach(({ won, lost, diff }) => {
+      const winner = this.participants[won];
+      const loser = this.participants[lost];
 
-      // Update winner's stats
-      winner.wins = (winner.wins || 0) + 1;
-      winner.diff = (winner.diff || 0) + diff;
-      winner.opponents = (winner.opponents || []).concat(loser.name);
+      winner.wins++;
+      winner.diff += diff;
+      winner.opponents.push(lost);
 
-      // Update loser's stats
-      loser.losses = (loser.losses || 0) + 1;
-      loser.diff = (loser.diff || 0) - diff;
-      loser.opponents = (loser.opponents || []).concat(winner.name);
+      loser.losses++;
+      loser.diff -= diff;
+      loser.opponents.push(won);
     });
 
     this.calculateBuchholz();
   }
 
-  // Check if the tournament should end
   checkEndCondition() {
-    const allFinished = this.participants.every(
+    return Object.values(this.participants).every(
       (p) => p.wins === this.breakpoint || p.losses === this.breakpoint
     );
-    return allFinished;
   }
 
-  // Create a standings table
   generateStandings() {
     console.log(`-------- Standings --------`);
-    this.sortParticipants();
-    return this.participants.map((p, index) => ({
+    const sorted = this.sortParticipants();
+    return sorted.map((p, index) => ({
       name: p.name,
       wins: p.wins,
       losses: p.losses,
@@ -188,9 +175,9 @@ class SwissTournament {
   simulateRound(isDecision) {
     const roundResults = this.rounds[this.rounds.length - 1].map(
       ({ player1, player2 }) => {
-        const winner = Math.random() > 0.5 ? player1.name : player2.name;
-        const loser = winner === player1.name ? player2.name : player1.name;
-        const diff = Math.floor(Math.random() * 10); // Random diff
+        const winner = Math.random() > 0.5 ? player1 : player2;
+        const loser = winner === player1 ? player2 : player1;
+        const diff = Math.floor(Math.random() * 10);
         return { won: winner, lost: loser, diff };
       }
     );
@@ -199,7 +186,6 @@ class SwissTournament {
     else console.log(`-------- Winner ${roundResults[0].won} --------`);
   }
 
-  // Simulate tournament rounds until the end condition is met
   simulateTournament(results) {
     while (!this.checkEndCondition()) {
       this.generateRound();
@@ -208,7 +194,28 @@ class SwissTournament {
       else this.processResults(results[this.rounds.length - 1]);
       console.log(this.generateStandings());
     }
-
     this.generateDecisionRound();
   }
 }
+
+// Example usage
+const participants = [
+  "Navi",
+  "Vitality",
+  "Mouz",
+  "FaZe",
+  "Saw",
+  "Falcons",
+  "Sangal",
+  "BetBoom",
+  "Fnatic",
+  "GL",
+  "Nemiga",
+  "C9",
+  "Sinners",
+  "Eclot",
+  "Rebels",
+  "Unity",
+];
+
+new SwissTournament(participants, 7).simulateTournament();
