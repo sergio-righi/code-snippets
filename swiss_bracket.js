@@ -17,7 +17,7 @@ class SwissTournament {
     this.rounds = [];
     this.results = [];
     this.breakpoint =
-      Math.ceil(Math.log2(Object.keys(participants).length)) - 1;
+      Math.ceil(Math.log2(Object.keys(this.participants).length)) - 1;
   }
 
   // Sort participants based on rules (wins, losses, buchholz, seed)
@@ -36,7 +36,7 @@ class SwissTournament {
 
   // Filter participants who have not yet reached the breakpoint
   filterParticipants() {
-    return Object.entries(this.participants)
+    return Object.entries(this.sortParticipants(this.participants))
       .filter(([, p]) => p.wins < this.breakpoint && p.losses < this.breakpoint)
       .map(([name, data]) => ({ name, ...data }));
   }
@@ -64,13 +64,13 @@ class SwissTournament {
   }
 
   generateDecisionRound() {
-    const participants = Object.keys(this.participants);
+    const participants = this.sortParticipants();
     if (participants.length % 2 === 0 && this.slots % 2 === 0) return;
     console.log("-------- Decision Round --------");
     this.rounds.push([
       {
-        player1: participants[this.slots - 1],
-        player2: participants[this.slots],
+        player1: participants[this.slots - 1].name,
+        player2: participants[this.slots].name,
       },
     ]);
     this.printRound();
@@ -156,8 +156,9 @@ class SwissTournament {
   }
 
   checkEndCondition() {
-    return Object.values(this.participants).every(
-      (p) => p.wins === this.breakpoint || p.losses === this.breakpoint
+    return (
+      this.rounds.length <
+      Math.ceil(Object.keys(this.participants).length / this.breakpoint) - 1
     );
   }
 
@@ -187,11 +188,15 @@ class SwissTournament {
   }
 
   simulateTournament(results) {
-    while (!this.checkEndCondition()) {
+    while (this.checkEndCondition()) {
       this.generateRound();
       this.printRound();
       if (!results) this.simulateRound(false);
-      else this.processResults(results[this.rounds.length - 1]);
+      else {
+        const result = results[this.rounds.length - 1];
+        if (result) this.processResults(result);
+        else this.simulateRound(false);
+      }
       console.log(this.generateStandings());
     }
     this.generateDecisionRound();
